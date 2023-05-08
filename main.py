@@ -1,11 +1,11 @@
 import sqlite3
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from threading import Thread
+from datetime import datetime, timedelta
+
 
 # Define a function for each thread to use
-
-
 def thread_function(user_id, username, skill):
     # Create a new connection and cursor object for this thread
     conn = sqlite3.connect('users.db')
@@ -14,7 +14,7 @@ def thread_function(user_id, username, skill):
     # Use the cursor object to execute some SQL statements
     c.execute(
         'CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, username TEXT)')
-    c.execute('CREATE TABLE IF NOT EXISTS skills (user_id INTEGER, skill TEXT, FOREIGN KEY (user_id) REFERENCES users(user_id))')
+    c.execute('CREATE TABLE IF NOT EXISTS skills (user_id INTEGER, skill TEXT, date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(user_id))')
     c.execute('INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)',
               (user_id, username))
     c.execute('INSERT INTO skills (user_id, skill) VALUES (?, ?)',
@@ -24,24 +24,34 @@ def thread_function(user_id, username, skill):
     conn.commit()
     conn.close()
 
-# Define the function for handling the /addskill command
-
-
+# Define the function for handling the /add_skill command
 def add_skill(update: Update, context: CallbackContext):
-    # Get the user ID, username, and skill from the command arguments
-    user_id = update.effective_user.id
-    username = update.effective_user.username
-    skill = context.args[0]
+    # Check if the message is a reply and save the skill from the replied message
+    if update.message.reply_to_message:
+        user_id = update.effective_user.id
+        username = update.effective_user.username
+        skill = update.message.reply_to_message.text
+        
+        # Start a new thread to handle the database update
+        thread = Thread(target=thread_function, args=(user_id, username, skill))
+        thread.start()
 
-    # Start a new thread to handle the database update
-    thread = Thread(target=thread_function, args=(user_id, username, skill))
-    thread.start()
+        # Send a confirmation message
+        update.message.reply_text(
+            f"Skill '{skill}' added for {username} ({user_id})")
+    else:
+        # Get the user ID, username, and skill from the command arguments
+        user_id = update.effective_user.id
+        username = update.effective_user.username
+        skill = context.args[0]
 
-    # Send a confirmation message
-    update.message.reply_text(
-        f"Skill '{skill}' added for {username} ({user_id})")
+        # Start a new thread to handle the database update
+        thread = Thread(target=thread_function, args=(user_id, username, skill))
+        thread.start()
 
-# Define the function for handling the /listskills command
+        # Send a confirmation message
+        update.message.reply_text(
+            f"Skill '{skill}' added for {username} ({user_id})")
 
 
 def list_skills(update: Update, context: CallbackContext):
@@ -49,9 +59,13 @@ def list_skills(update: Update, context: CallbackContext):
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
 
-    # Get all the users and their skills from the database
+    # Get the datetime 24 hours ago
+    datetime_24h_ago = datetime.now() - timedelta(hours=24)
+
+    # Get all the users and their skills added in the last 24 hours from the database
     c.execute(
-        'SELECT users.username, skills.skill FROM users JOIN skills ON users.user_id = skills.user_id')
+        'SELECT users.username, skills.skill FROM users JOIN skills ON users.user_id = skills.user_id WHERE skills.date_added > ?',
+        (datetime_24h_ago,))
     skills = c.fetchall()
 
     # Create a formatted list of skills
@@ -62,7 +76,8 @@ def list_skills(update: Update, context: CallbackContext):
     conn.close()
 
     # Send the skill list as a message
-    update.message.reply_text(f"Current skills:\n{skill_list}")
+    update.message.reply_text(f"Latest skills added in the last 24 hours:\n{skill_list}")
+
 
 
 # Create the bot and add the command handlers
@@ -70,6 +85,7 @@ updater = Updater('6002292363:AAHftRSdNeXZ-BB4KAtvGwagRGlpR1n7JaU')
 dispatcher = updater.dispatcher
 dispatcher.add_handler(CommandHandler('add_skill', add_skill))
 dispatcher.add_handler(CommandHandler('list_skills', list_skills))
+dispatcher.add_handler(MessageHandler(Filters.text, add_skill))
 
 # Start the bot
 updater.start_polling()
