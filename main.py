@@ -83,8 +83,8 @@ def list_skills(update: Update, context: CallbackContext):
 # Create the bot and add the command handlers
 updater = Updater('6002292363:AAHftRSdNeXZ-BB4KAtvGwagRGlpR1n7JaU')
 dispatcher = updater.dispatcher
-dispatcher.add_handler(CommandHandler('add_skill', add_skill))
-dispatcher.add_handler(CommandHandler('list_skills', list_skills))
+dispatcher.add_handler(CommandHandler('save_shill', add_skill))
+dispatcher.add_handler(CommandHandler('shill_list', list_skills))
 dispatcher.add_handler(MessageHandler(Filters.text, add_skill))
 
 # Start the bot
