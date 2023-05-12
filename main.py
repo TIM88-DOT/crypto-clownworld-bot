@@ -24,34 +24,55 @@ def thread_function(user_id, username, skill):
     conn.commit()
     conn.close()
 
-# Define the function for handling the /add_skill command
 def add_skill(update: Update, context: CallbackContext):
     # Check if the message is a reply and save the skill from the replied message
     if update.message.reply_to_message:
         user_id = update.effective_user.id
         username = update.effective_user.username
-        skill = update.message.reply_to_message.text
-        
+        message = update.message.reply_to_message.text or update.message.reply_to_message.caption
+
         # Start a new thread to handle the database update
-        thread = Thread(target=thread_function, args=(user_id, username, skill))
+        thread = Thread(target=thread_function,
+                        args=(user_id, username, message))
         thread.start()
 
         # Send a confirmation message
         update.message.reply_text(
-            f"Skill '{skill}' added for {username} ({user_id})")
+            f"Skill '{message}' added for {username} ({user_id})")
     else:
-        # Get the user ID, username, and skill from the command arguments
-        user_id = update.effective_user.id
-        username = update.effective_user.username
-        skill = context.args[0]
+        # Check if the message is in a group
+        if update.message.chat.type == "group" or update.message.chat.type == "supergroup":
+            # Get the user ID, username, and skill from the message text
+            user_id = update.effective_user.id
+            username = update.effective_user.username
+            message = update.message.text
 
-        # Start a new thread to handle the database update
-        thread = Thread(target=thread_function, args=(user_id, username, skill))
-        thread.start()
+            # Exclude the command itself from being saved as a skill
+            if message.startswith('/save_shill'):
+                message = message[len('/save_shill'):].strip()
 
-        # Send a confirmation message
-        update.message.reply_text(
-            f"Skill '{skill}' added for {username} ({user_id})")
+            # Start a new thread to handle the database update
+            thread = Thread(target=thread_function,
+                            args=(user_id, username, message))
+            thread.start()
+
+            # Send a confirmation message
+            update.message.reply_text(
+                f"Skill '{message}' added for {username} ({user_id})")
+        else:
+            # If the message is not a reply and not in a group, handle it as before
+            user_id = update.effective_user.id
+            username = update.effective_user.username
+            message = update.message.text
+
+            # Start a new thread to handle the database update
+            thread = Thread(target=thread_function,
+                            args=(user_id, username, message))
+            thread.start()
+
+            # Send a confirmation message
+            update.message.reply_text(
+                f"Skill '{message}' added for {username} ({user_id})")
 
 
 def list_skills(update: Update, context: CallbackContext):
@@ -76,7 +97,7 @@ def list_skills(update: Update, context: CallbackContext):
     conn.close()
 
     # Send the skill list as a message
-    update.message.reply_text(f"Latest skills added in the last 24 hours:\n{skill_list}")
+    update.message.reply_text(f"Latest shills added in the last 24 hours:\n{skill_list}")
 
 
 
