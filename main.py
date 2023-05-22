@@ -45,7 +45,7 @@ def add_skill(update: Update, context: CallbackContext):
     username = update.effective_user.username
     message = update.message.text
 
-    if message.startswith('/save_shill') or message.startswith('/save_shill@'):
+    if message.startswith('/save_shill') or message.startswith('/save_shill@crypto_clown_bot'):
         # Exclude the command itself from being saved as a skill
         command = message.split()[0]
         message = message[len(command):].strip()
