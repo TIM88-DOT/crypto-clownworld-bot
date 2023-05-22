@@ -1,9 +1,13 @@
 import sqlite3
+import os
 from telegram import Update, ChatMember
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from threading import Thread
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 
+load_dotenv()
+bot_token = os.getenv('BOT_TOKEN')
 
 # Define a function for each thread to use
 def thread_function(update, user_id, username, skill):
@@ -106,7 +110,7 @@ def list_skills(update: Update, context: CallbackContext):
 
 
 # Create the bot and add the command handlers
-updater = Updater('6002292363:AAHftRSdNeXZ-BB4KAtvGwagRGlpR1n7JaU')
+updater = Updater(bot_token)
 dispatcher = updater.dispatcher
 dispatcher.add_handler(CommandHandler('save_shill', add_skill))
 dispatcher.add_handler(CommandHandler('shill_list', list_skills))
