@@ -35,41 +35,43 @@ def thread_function(update, user_id, username, skill):
         conn.close()
         update.message.reply_text(
             "You have already added the maximum limit of 3 shills in the last 24 hours.")
-        
-        
+
+
+
 # Define the function for handling the /add_skill command
-
 def add_skill(update: Update, context: CallbackContext):
-    # Check if the message is a reply
-    if update.message.reply_to_message:
-        # Check if the user is a chat admin
-        chat_id = update.effective_chat.id
-        message_caller_id = update.effective_user.id
-        user_id = update.message.reply_to_message.from_user.id
-        username = update.message.reply_to_message.from_user.username
-        chat_member = context.bot.get_chat_member(chat_id, message_caller_id)
-        if chat_member.status == ChatMember.ADMINISTRATOR or chat_member.status == ChatMember.CREATOR or message_caller_id == user_id:
-            skill = update.message.reply_to_message.text
+    # Get the user ID, username, and skill from the command arguments
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    message = update.message.text
 
-            # Start a new thread to handle the database update
-            thread = Thread(target=thread_function,
-                            args=(update, user_id, username, skill))
-            thread.start()
-
-        else:
-            # If the user is not a chat admin, send an error message
-            update.message.reply_text(
-                "Only chat admins can save other users' shills.")
-    else:
-        # Get the user ID, username, and skill from the command arguments
-        user_id = update.effective_user.id
-        username = update.effective_user.username
-        message = update.message.text
-
+    if message.startswith('/save_shill') or message.startswith('/save_shill@'):
         # Exclude the command itself from being saved as a skill
-        if message.startswith('/save_shill'):
-            message = message[len('/save_shill'):].strip()
+        command = message.split()[0]
+        message = message[len(command):].strip()
 
+        # Check if the message is a reply
+        if update.message.reply_to_message:
+            # Check if the user is a chat admin or the same user who sent the original message
+            chat_id = update.effective_chat.id
+            message_caller_id = update.effective_user.id
+            user_id = update.message.reply_to_message.from_user.id
+            username = update.message.reply_to_message.from_user.username
+            chat_member = context.bot.get_chat_member(chat_id, message_caller_id)
+            
+            if (chat_member.status == ChatMember.ADMINISTRATOR or
+                    chat_member.status == ChatMember.CREATOR or
+                    message_caller_id == user_id):
+
+                # Start a new thread to handle the database update
+                thread = Thread(target=thread_function,
+                                args=(update, user_id, username, update.message.reply_to_message.text))
+                thread.start()
+            else:
+                # If the user is not a chat admin or the original message sender, send an error message
+                update.message.reply_text(
+                    "Only chat admins can save other users' shills.")
+        else:
             # Start a new thread to handle the database update
             thread = Thread(target=thread_function,
                             args=(update, user_id, username, message))
