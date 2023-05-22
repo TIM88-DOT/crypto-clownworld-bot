@@ -106,7 +106,7 @@ def list_skills(update: Update, context: CallbackContext):
 
     # Send the skill list as a message
     update.message.reply_text(
-        f"Latest Shills in the last 24 hours:\n{skill_list}")
+        f"Latest SHILLS in the last 24 hours:\n{skill_list}")
 
 
 # Create the bot and add the command handlers
