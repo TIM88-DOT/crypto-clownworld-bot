@@ -113,7 +113,7 @@ def list_skills(update: Update, context: CallbackContext):
 
     # Create a formatted list of skills with monospace usernames
     skill_list = '\n'.join(
-        [f'<code>{html.escape(username)}</code>: {skill}' for (username, skill) in skills])
+        [f'{username}: <code>{html.escape(skill)}</code>' for (username, skill) in skills])
 
     # Close the connection
     conn.close()
