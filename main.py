@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import html
 from telegram import Update, ChatMember
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from threading import Thread
@@ -10,6 +11,8 @@ load_dotenv()
 bot_token = os.getenv('BOT_TOKEN')
 
 # Define a function for each thread to use
+
+
 def thread_function(update, user_id, username, skill):
     # Create a new connection and cursor object for this thread
     conn = sqlite3.connect('users.db')
@@ -41,7 +44,6 @@ def thread_function(update, user_id, username, skill):
             "You have already added the maximum limit of 3 shills in the last 24 hours.")
 
 
-
 # Define the function for handling the /add_skill command
 def add_skill(update: Update, context: CallbackContext):
     # Get the user ID, username, and skill from the command arguments
@@ -61,8 +63,9 @@ def add_skill(update: Update, context: CallbackContext):
             message_caller_id = update.effective_user.id
             user_id = update.message.reply_to_message.from_user.id
             username = update.message.reply_to_message.from_user.username
-            chat_member = context.bot.get_chat_member(chat_id, message_caller_id)
-            
+            chat_member = context.bot.get_chat_member(
+                chat_id, message_caller_id)
+
             if (chat_member.status == ChatMember.ADMINISTRATOR or
                     chat_member.status == ChatMember.CREATOR or
                     message_caller_id == user_id):
@@ -82,7 +85,6 @@ def add_skill(update: Update, context: CallbackContext):
             thread.start()
 
 
-
 def list_skills(update: Update, context: CallbackContext):
     # Create a new connection and cursor object for this thread
     conn = sqlite3.connect('users.db')
@@ -97,16 +99,16 @@ def list_skills(update: Update, context: CallbackContext):
         (datetime_24h_ago,))
     skills = c.fetchall()
 
-    # Create a formatted list of skills
+    # Create a formatted list of skills with monospace usernames
     skill_list = '\n'.join(
-        [f'{username}: {skill}' for (username, skill) in skills])
+        [f'<code>{html.escape(username)}</code>: {skill}' for (username, skill) in skills])
 
     # Close the connection
     conn.close()
 
-    # Send the skill list as a message
-    update.message.reply_text(
-        f"Latest SHILLS in the last 24 hours:\n{skill_list}")
+    # Send the skill list as a message with monospace usernames
+    update.message.reply_html(
+        f"<b>Latest SHILLS in the last 24 hours:</b>\n{skill_list}")
 
 
 # Create the bot and add the command handlers
