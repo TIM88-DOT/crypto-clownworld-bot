@@ -70,19 +70,31 @@ def add_skill(update: Update, context: CallbackContext):
                     chat_member.status == ChatMember.CREATOR or
                     message_caller_id == user_id):
 
-                # Start a new thread to handle the database update
-                thread = Thread(target=thread_function,
-                                args=(update, user_id, username, update.message.reply_to_message.text))
-                thread.start()
+                # Check if the skill message exceeds the character limit (e.g., 100 characters)
+                character_limit = 100
+                if len(update.message.reply_to_message.text) > character_limit:
+                    update.message.reply_text(
+                        f"The skill message exceeds the character limit of {character_limit} characters.")
+                else:
+                    # Start a new thread to handle the database update
+                    thread = Thread(target=thread_function,
+                                    args=(update, user_id, username, update.message.reply_to_message.text))
+                    thread.start()
             else:
                 # If the user is not a chat admin or the original message sender, send an error message
                 update.message.reply_text(
                     "Only chat admins can save other users' shills.")
         else:
-            # Start a new thread to handle the database update
-            thread = Thread(target=thread_function,
-                            args=(update, user_id, username, message))
-            thread.start()
+            # Check if the skill message exceeds the character limit (e.g., 100 characters)
+            character_limit = 100
+            if len(message) > character_limit:
+                update.message.reply_text(
+                    f"The skill message exceeds the character limit of {character_limit} characters.")
+            else:
+                # Start a new thread to handle the database update
+                thread = Thread(target=thread_function,
+                                args=(update, user_id, username, message))
+                thread.start()
 
 
 def list_skills(update: Update, context: CallbackContext):
