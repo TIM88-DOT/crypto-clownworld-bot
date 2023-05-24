@@ -10,10 +10,10 @@ from dotenv import load_dotenv
 load_dotenv()
 bot_token = os.getenv('BOT_TOKEN')
 
+
 # Define a function for each thread to use
 
-
-def thread_function(update, user_id, username, skill):
+def thread_function(update, user_id, username, skill, message_reference):
     # Create a new connection and cursor object for this thread
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
@@ -21,7 +21,7 @@ def thread_function(update, user_id, username, skill):
     # Use the cursor object to execute some SQL statements
     c.execute(
         'CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, username TEXT)')
-    c.execute('CREATE TABLE IF NOT EXISTS skills (user_id INTEGER, skill TEXT, date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(user_id))')
+    c.execute('CREATE TABLE IF NOT EXISTS skills (user_id INTEGER, skill TEXT, message_reference TEXT, date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(user_id))')
     c.execute('INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)',
               (user_id, username))
 
@@ -31,17 +31,27 @@ def thread_function(update, user_id, username, skill):
     skill_count = c.fetchone()[0]
 
     if skill_count < 3:
-        c.execute('INSERT INTO skills (user_id, skill) VALUES (?, ?)',
-                  (user_id, skill))
-        # Commit the changes and close the connection
-        conn.commit()
-        conn.close()
-        update.message.reply_text(
-            f"Shill '{skill}' added for {username} ({user_id})")
+        # Check if the message reference already exists in the database
+        c.execute(
+            'SELECT COUNT(*) FROM skills WHERE message_reference = ?', (message_reference,))
+        reference_count = c.fetchone()[0]
+
+        if reference_count > 0:
+            conn.close()
+            update.message.reply_text(
+                "The same shill has already been added before.")
+        else:
+            c.execute('INSERT INTO skills (user_id, skill, message_reference) VALUES (?, ?, ?)',
+                      (user_id, skill, message_reference))
+            # Commit the changes and close the connection
+            conn.commit()
+            conn.close()
+            update.message.reply_text(
+                f"Shill '{skill}' added for {username} ({user_id})")
     else:
         conn.close()
         update.message.reply_text(
-            "You have already added the maximum limit of 3 shills in the last 24 hours.")
+            "You have already added the maximum limit of 3 skills in the last 24 hours.")
 
 
 # Define the function for handling the /add_skill command
@@ -70,30 +80,39 @@ def add_skill(update: Update, context: CallbackContext):
                     chat_member.status == ChatMember.CREATOR or
                     message_caller_id == user_id):
 
+                if not update.message.reply_to_message.text:
+                    update.message.reply_text("The shill message is empty.")
+                    return
+
                 # Check if the skill message exceeds the character limit (e.g., 100 characters)
                 character_limit = 100
                 if len(update.message.reply_to_message.text) > character_limit:
                     update.message.reply_text(
-                        f"The skill message exceeds the character limit of {character_limit} characters.")
+                        f"The shill message exceeds the character limit of {character_limit} characters.")
                 else:
                     # Start a new thread to handle the database update
                     thread = Thread(target=thread_function,
-                                    args=(update, user_id, username, update.message.reply_to_message.text))
+                                    args=(update, user_id, username, update.message.reply_to_message.text, update.message.reply_to_message.link))
                     thread.start()
             else:
                 # If the user is not a chat admin or the original message sender, send an error message
                 update.message.reply_text(
-                    "Only chat admins can save other users' shills.")
+                    "Only chat admins can save other users' shills unless you're a jannie.")
         else:
+
+            # Check if the message is empty
+            if not message:
+                update.message.reply_text("The shill message is empty.")
+                return
             # Check if the skill message exceeds the character limit (e.g., 100 characters)
             character_limit = 100
             if len(message) > character_limit:
                 update.message.reply_text(
-                    f"The skill message exceeds the character limit of {character_limit} characters.")
+                    f"The shill message exceeds the character limit of {character_limit} characters.")
             else:
                 # Start a new thread to handle the database update
                 thread = Thread(target=thread_function,
-                                args=(update, user_id, username, message))
+                                args=(update, user_id, username, message, update.message.link))
                 thread.start()
 
 
@@ -107,20 +126,37 @@ def list_skills(update: Update, context: CallbackContext):
 
     # Get all the users and their skills added in the last 24 hours from the database
     c.execute(
-        'SELECT users.username, skills.skill FROM users JOIN skills ON users.user_id = skills.user_id WHERE skills.date_added > ?',
+        'SELECT users.username, users.user_id, skills.skill, skills.message_reference FROM users JOIN skills ON users.user_id = skills.user_id WHERE skills.date_added > ?',
         (datetime_24h_ago,))
     skills = c.fetchall()
 
-    # Create a formatted list of skills with monospace usernames
+    # Sort the skills based on the usernames in ascending order
+    skills.sort(key=lambda x: x[0])
+
+    # Create a dictionary to store the shills for each user
+    shills_by_user = {}
+
+    # Group the shills by user
+    for username, user_id, skill, message_reference in skills:
+        if username or user_id:
+            if not username:
+                username = user_id
+            if username not in shills_by_user:
+                shills_by_user[username] = []
+            shills_by_user[username].append(message_reference)
+
+    # Create a formatted list of shills with sorted usernames and message references
     skill_list = '\n'.join(
-        [f'{username}: <code>{html.escape(skill)}</code>' for (username, skill) in skills])
+        [username + ': ' + ', '.join(['<a href=\'' + ref + '\'>' + ref.split("/")[-1] + '</a>' for ref in shills_by_user[username]]) for username in shills_by_user])
+
 
     # Close the connection
     conn.close()
 
-    # Send the skill list as a message with monospace usernames
+    # Send the shill list as a message with sorted usernames and message references
     update.message.reply_html(
-        f"<b>Latest SHILLS in the last 24 hours:</b>\n{skill_list}")
+        f"<b>Latest Shills in the last 24 hours:</b>\n{skill_list}")
+
 
 
 # Create the bot and add the command handlers
