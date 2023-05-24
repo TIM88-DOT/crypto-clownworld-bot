@@ -147,8 +147,7 @@ def list_skills(update: Update, context: CallbackContext):
 
     # Create a formatted list of shills with sorted usernames and message references
     skill_list = '\n'.join(
-        [username + ': ' + ', '.join(['<a href=\'' + ref + '\'>' + ref.split("/")[-1] + '</a>' for ref in shills_by_user[username]]) for username in shills_by_user])
-
+        [f"<b>{username}</b>" + ': ' + ', '.join(['<a href=\'' + ref + '\'>' + ref.split("/")[-1] + '</a>' for ref in shills_by_user[username]]) for username in shills_by_user])
 
     # Close the connection
     conn.close()
@@ -156,7 +155,6 @@ def list_skills(update: Update, context: CallbackContext):
     # Send the shill list as a message with sorted usernames and message references
     update.message.reply_html(
         f"<b>Latest Shills in the last 24 hours:</b>\n{skill_list}")
-
 
 
 # Create the bot and add the command handlers
