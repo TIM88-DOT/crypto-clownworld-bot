@@ -104,11 +104,7 @@ def add_skill(update: Update, context: CallbackContext):
             if not message:
                 update.message.reply_text("The shill message is empty.")
                 return
-            # Check if the skill message exceeds the character limit (e.g., 100 characters)
-            character_limit = 100
-            if len(message) > character_limit:
-                update.message.reply_text(
-                    f"The shill message exceeds the character limit of {character_limit} characters.")
+
             else:
                 # Start a new thread to handle the database update
                 thread = Thread(target=thread_function,
