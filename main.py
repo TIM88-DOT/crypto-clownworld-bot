@@ -127,10 +127,6 @@ def list_skills(update: Update, context: CallbackContext):
         (datetime_24h_ago,))
     skills = c.fetchall()
 
-    # Convert the date_added strings to datetime objects
-    skills = [(username, user_id, skill, message_reference, datetime.strptime(date_added, '%Y-%m-%d %H:%M:%S'))
-              for username, user_id, skill, message_reference, date_added in skills]
-
     # Sort the skills based on the usernames in ascending order and time elapsed in descending order
     skills.sort(key=lambda x: (x[0], current_time - x[4]), reverse=True)
 
@@ -160,7 +156,8 @@ def list_skills(update: Update, context: CallbackContext):
                 else:
                     skill_list += f'{int(hours_elapsed)} hours ago:\n'
                 previous_hours = hours_elapsed
-            skill_list += f'<a href=\'{message_reference}\'>{message_reference.split("/")[-1]}</a>\n'
+            if message_reference is not None:
+                skill_list += f'<a href=\'{message_reference}\'>{message_reference.split("/")[-1]}</a>\n'
         skill_list += '\n'
 
     # Close the connection
