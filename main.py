@@ -28,7 +28,7 @@ def thread_function(update, user_id, username, skill, message_reference):
 
     # Check if the user has already added 3 skills in the last 24 hours
     c.execute('SELECT COUNT(*) FROM skills WHERE user_id = ? AND date_added > ?',
-              (user_id, datetime.now() - timedelta(hours=24)))
+              (user_id, datetime.utcnow() - timedelta(hours=24)))
     skill_count = c.fetchone()[0]
 
     if skill_count < 3:
@@ -112,7 +112,6 @@ def add_skill(update: Update, context: CallbackContext):
                                 args=(update, user_id, username, message, update.message.link))
                 thread.start()
 
-
 # ...
 
 def list_skills(update: Update, context: CallbackContext):
@@ -121,7 +120,7 @@ def list_skills(update: Update, context: CallbackContext):
     c = conn.cursor()
 
     # Get the current datetime
-    now = datetime.now()
+    now = datetime.utcnow()
 
     # Get all the users and their skills added in the last 24 hours from the database
     c.execute(
@@ -142,7 +141,8 @@ def list_skills(update: Update, context: CallbackContext):
                 username = user_id
             if username not in shills_by_user:
                 shills_by_user[username] = []
-            shills_by_user[username].append((message_reference, parse(date_added)))
+            shills_by_user[username].append(
+                (message_reference, parse(date_added)))
 
     # Create a formatted list of shills with sorted usernames and message references
     skill_list = ''
@@ -151,11 +151,17 @@ def list_skills(update: Update, context: CallbackContext):
     for username in shills_by_user:
         shills_by_user[username].sort(key=lambda x: now - x[1])
         elapsed_hours = (now - shills_by_user[username][0][1]).seconds // 3600
+        print("now", now)
+        print("saved", shills_by_user[username][0][1])
+        
+        if elapsed_hours < 1:
+            elapsed_hours = "&lt 1"
 
         if elapsed_hours != previous_elapsed_hours:
-            skill_list += f"\n<b>{elapsed_hours} {'hours' if elapsed_hours > 1 else 'hour'} ago:</b>\n"
+            skill_list += f"\n<b>{elapsed_hours} {'hour' if elapsed_hours == 1 else 'hours'} ago:</b>\n"
 
-        skill_list += f"{username}: " + ', '.join(['<a href=\'' + ref[0] + '\'>' + ref[0].split("/")[-1] + '</a>' for ref in shills_by_user[username]]) + '\n'
+        skill_list += f"{username}: " + ', '.join(['<a href=\'' + ref[0] + '\'>' + ref[0].split(
+            "/")[-1] + '</a>' for ref in shills_by_user[username]]) + '\n'
         previous_elapsed_hours = elapsed_hours
 
     # Close the connection
