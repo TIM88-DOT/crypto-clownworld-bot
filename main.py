@@ -97,7 +97,7 @@ def add_skill(update: Update, context: CallbackContext):
             else:
                 # If the user is not a chat admin or the original message sender, send an error message
                 update.message.reply_text(
-                    "Only chat admins can save other users' shills unless you're a jannie.")
+                    "Can't save other clowns shills unless you're a jannie.")
         else:
 
             # Check if the message is empty
@@ -126,6 +126,10 @@ def list_skills(update: Update, context: CallbackContext):
         'SELECT users.username, users.user_id, skills.skill, skills.message_reference, skills.date_added FROM users JOIN skills ON users.user_id = skills.user_id WHERE skills.date_added > ?',
         (datetime_24h_ago,))
     skills = c.fetchall()
+
+    # Convert the date_added strings to datetime objects
+    skills = [(username, user_id, skill, message_reference, datetime.strptime(date_added, '%Y-%m-%d %H:%M:%S'))
+              for username, user_id, skill, message_reference, date_added in skills]
 
     # Sort the skills based on the usernames in ascending order and time elapsed in descending order
     skills.sort(key=lambda x: (x[0], current_time - x[4]), reverse=True)
