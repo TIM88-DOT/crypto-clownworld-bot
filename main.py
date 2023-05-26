@@ -5,6 +5,7 @@ from telegram import Update, ChatMember
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from threading import Thread
 from datetime import datetime, timedelta
+from dateutil.parser import parse
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -112,6 +113,8 @@ def add_skill(update: Update, context: CallbackContext):
                 thread.start()
 
 
+# ...
+
 def list_skills(update: Update, context: CallbackContext):
     # Create a new connection and cursor object for this thread
     conn = sqlite3.connect('users.db')
@@ -127,7 +130,7 @@ def list_skills(update: Update, context: CallbackContext):
     skills = c.fetchall()
 
     # Sort the skills based on the time elapsed in ascending order
-    skills.sort(key=lambda x: now - x[4])
+    skills.sort(key=lambda x: now - parse(x[4]))
 
     # Create a dictionary to store the shills for each user
     shills_by_user = {}
@@ -139,7 +142,7 @@ def list_skills(update: Update, context: CallbackContext):
                 username = user_id
             if username not in shills_by_user:
                 shills_by_user[username] = []
-            shills_by_user[username].append((message_reference, date_added))
+            shills_by_user[username].append((message_reference, parse(date_added)))
 
     # Create a formatted list of shills with sorted usernames and message references
     skill_list = ''
@@ -152,8 +155,7 @@ def list_skills(update: Update, context: CallbackContext):
         if elapsed_hours != previous_elapsed_hours:
             skill_list += f"\n<b>{elapsed_hours} {'hours' if elapsed_hours > 1 else 'hour'} ago:</b>\n"
 
-        skill_list += f"{username}: " + ', '.join(['<a href=\'' + ref[0] + '\'>' + ref[0].split(
-            "/")[-1] + '</a>' for ref in shills_by_user[username]]) + '\n'
+        skill_list += f"{username}: " + ', '.join(['<a href=\'' + ref[0] + '\'>' + ref[0].split("/")[-1] + '</a>' for ref in shills_by_user[username]]) + '\n'
         previous_elapsed_hours = elapsed_hours
 
     # Close the connection
@@ -162,6 +164,7 @@ def list_skills(update: Update, context: CallbackContext):
     # Send the shill list as a message with sorted usernames and message references
     update.message.reply_html(
         f"<b>Latest Shills in the last 24 hours:</b>{skill_list}")
+
 
 
 # Create the bot and add the command handlers
