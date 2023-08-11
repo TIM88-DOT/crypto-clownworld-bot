@@ -31,7 +31,7 @@ def thread_function(update, user_id, username, skill, message_reference):
               (user_id, datetime.utcnow() - timedelta(hours=24)))
     skill_count = c.fetchone()[0]
 
-    if skill_count < 3:
+    if skill_count < 5:
         # Check if the message reference already exists in the database
         c.execute(
             'SELECT COUNT(*) FROM skills WHERE message_reference = ?', (message_reference,))
@@ -52,7 +52,7 @@ def thread_function(update, user_id, username, skill, message_reference):
     else:
         conn.close()
         update.message.reply_text(
-            "You have already added the maximum limit of 3 skills in the last 24 hours.")
+            "You have already added the maximum limit of 5 shills in the last 24 hours 🤡")
 
 
 # Define the function for handling the /add_skill command
@@ -82,7 +82,7 @@ def add_skill(update: Update, context: CallbackContext):
                     message_caller_id == user_id):
 
                 if not update.message.reply_to_message.text:
-                    update.message.reply_text("The shill message is empty.")
+                    update.message.reply_text("The shill message is empty 🤡")
                     return
                 else:
                     # Start a new thread to handle the database update
@@ -92,12 +92,12 @@ def add_skill(update: Update, context: CallbackContext):
             else:
                 # If the user is not a chat admin or the original message sender, send an error message
                 update.message.reply_text(
-                    "Only chat admins can save other users' shills unless you're a jannie.")
+                    "Only chat jannies can save other users shills 🤡")
         else:
 
             # Check if the message is empty
             if not message:
-                update.message.reply_text("The shill message is empty.")
+                update.message.reply_text("The shill message is empty 🤡")
                 return
 
             else:
@@ -163,7 +163,7 @@ def list_skills(update: Update, context: CallbackContext):
 
     # Send the shill list as a message with sorted usernames and message references
     update.message.reply_html(
-        f"<b>Latest Shills in the last 24 hours:</b>{skill_list}")
+        f"🤡<b>Latest Shills in the last 24 hours:</b>{skill_list}")
 
 
 
